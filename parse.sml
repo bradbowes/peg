@@ -3,11 +3,14 @@ struct
    fun parse s = let
       val lex = Lexer.lexer s
 
-      fun eat (tok, c, err) = let
+      fun eat (tok, c) = let
          val (t, c') = lex c
       in
          if t = tok then c'
-         else raise (Fail err)
+         else raise (Fail ("expected '" ^
+                           (Token.toString tok) ^
+                           "', found '" ^
+                           (Token.toString t) ^ "'" ))
       end
 
       fun getClass cls = let
@@ -23,9 +26,13 @@ struct
          | Token.CLASS cls => (getClass cls, c)
          | Token.ID id     => (Ast.NT id, c)
          | Token.DOT       => (Ast.ANY, c)
+         | Token.LPAREN    => let
+                                 val (e, c) = getExpression c
+                                 val c = eat (Token.RPAREN, c)
+                               in (e, c) end
          | _               => raise (Fail "not implemented")
 
-      fun getSuffix (t, c) = let
+      and getSuffix (t, c) = let
          val (p, c) = getPrimary (t, c)
          val (t, c') = lex c
       in case t of
@@ -35,12 +42,12 @@ struct
          | _               => (p, c)
       end
 
-      fun getPrefix (t, c) = case t of
+      and getPrefix (t, c) = case t of
            Token.AND => let val (s, c) = getSuffix (lex c) in (Ast.PEEK s, c) end
          | Token.NOT => let val (s, c) = getSuffix (lex c) in (Ast.NOT s, c) end
          | _         => getSuffix (t, c)
 
-      fun getSequence c = let
+      and getSequence c = let
          fun loop (ls, c) = let
             val (t, c') = lex c
 
@@ -70,22 +77,29 @@ struct
          end
       in loop ([], c) end
 
-      fun getExpression c = let
-         fun loop (ls, (t, c)) = case t of
-              Token.SLASH  => let val (seq, c) = getSequence c
-                              in loop (seq :: ls, (lex c)) end
-            | _            => (case ls of
-                       []        => raise (Fail "expected expression")
-                     | x :: []   => (x, c)
-                     | _         => (Ast.ALT (List.rev ls), c) )
+      and getExpression c = let
+         fun loop (ls, c) = let
+            val (t, c') = lex c
+         in
+            case t of
+                 Token.SLASH  => let val (seq, c) = getSequence c'
+                                 in loop (seq :: ls, c) end
+               | _            => (case ls of
+                          []        => raise (Fail "expected expression")
+                        | x :: []   => (x, c)
+                        | _         => (Ast.ALT (List.rev ls), c) )
+         end
          val (seq, c) = getSequence c
       in
-         loop ([seq], (lex c))
+         loop ([seq], c)
       end
 
       fun getDef (grm, (t, c)) = let
-         val id = case t of Token.ID s => s | _ => raise (Fail "expected identifier")
-         val c = eat (Token.LEFTARROW, c, "expected '<-'")
+         val id = case t of
+                       Token.ID s => s
+                     | _            => raise (Fail ("expected identifier, found '"
+                                         ^ (Token.toString t) ^ "'"))
+         val c = eat (Token.LEFTARROW, c)
          val (exp, c) = getExpression c
       in (Map.insert (grm, id, exp), c) end
 
