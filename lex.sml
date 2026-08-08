@@ -24,10 +24,16 @@ struct
          else (ch, pos)
       end
 
-      fun getEscape pos = let
+      fun getId (ls, pos) = let
          val ch = getChar pos
       in
-         case ch of
+         if Char.isAlphaNum ch orelse ch = #"-"
+         then getId (ch :: ls, pos + 1)
+         else (ID (String.implode (List.rev ls)), pos)
+      end
+
+      fun getLiteral (tok, delim, pos) = let
+         fun escape (ch, pos) = case ch of
               #"\^D" => raise Fail "Unexpected end of input"
             | #"\\"  => (
                let val ch = getChar (pos + 1)
@@ -44,23 +50,13 @@ struct
                   | _      => raise Fail "Illegal escape sequence"
                end, pos + 2)
             | _      => (ch, pos + 1)
-      end
 
-      fun getId (ls, pos) = let
-         val ch = getChar pos
-      in
-         if Char.isAlphaNum ch orelse ch = #"-"
-         then getId (ch :: ls, pos + 1)
-         else (ID (String.implode (List.rev ls)), pos)
-      end
-
-      fun getLiteral (tok, delim, pos) = let
          fun loop (ls, pos) = let
-            val (ch, p) = getEscape pos
+            val c = getChar pos
          in
-            if ch = delim
-            then (tok (String.implode (List.rev ls)), p)
-            else loop (ch :: ls, p)
+            if c = delim
+            then (tok (String.implode (List.rev ls)), pos + 1)
+            else let val (c, p) = escape (c, pos) in loop (c :: ls, p) end
          end
       in loop ([], pos) end
 
