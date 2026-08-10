@@ -7,16 +7,15 @@ struct
          val (t, c') = lex c
       in
          if t = tok then c'
-         else raise (Fail ("expected '" ^
-                           (Token.toString tok) ^
-                           "', found '" ^
-                           (Token.toString t) ^ "'" ))
+         else raise Err.Peg (
+            ("expected '" ^ Token.toString tok ^ "', found '" ^ Token.toString t ^ "'"),
+            c)
       end
 
       fun getClass cls = let
          fun loop (str, ls) = case str of
               x1 :: #"-" :: x2 :: xs   => loop (xs, (Ast.RGE (x1, x2)) :: ls)
-            | _ :: #"-" :: []          => raise (Fail "incomplete range")
+            | _ :: #"-" :: []          => raise Fail "incomplete range"
             | x :: xs                  => loop (xs, Ast.CHR x :: ls)
             | []                       => Ast.ALT (List.rev ls)
       in loop (String.explode cls, []) end
@@ -30,7 +29,7 @@ struct
                                  val (e, c) = getExpression c
                                  val c = eat (Token.RPAREN, c)
                                in (e, c) end
-         | _               => raise (Fail "not implemented")
+         | _               => raise Err.Peg ("expected primary", c)
 
       and getSuffix (t, c) = let
          val (p, c) = getPrimary (t, c)
@@ -56,7 +55,7 @@ struct
             in loop (item :: ls, c) end
 
             fun done () = case ls of
-                 []        => raise (Fail "expected sequence")
+                 []        => raise Err.Peg ("expected sequence", c)
                | x :: []   => (x, c)
                | _         => (Ast.SEQ (List.rev ls), c)
          in
@@ -85,7 +84,7 @@ struct
                  Token.SLASH  => let val (seq, c) = getSequence c'
                                  in loop (seq :: ls, c) end
                | _            => (case ls of
-                          []        => raise (Fail "expected expression")
+                          []        => raise Err.Peg ("expected expression", c)
                         | x :: []   => (x, c)
                         | _         => (Ast.ALT (List.rev ls), c) )
          end
@@ -97,8 +96,8 @@ struct
       fun getDef (grm, (t, c)) = let
          val id = case t of
                        Token.ID s => s
-                     | _            => raise (Fail ("expected identifier, found '"
-                                         ^ (Token.toString t) ^ "'"))
+                     | _            => raise Err.Peg (("expected identifier, found '"
+                                         ^ (Token.toString t) ^ "'"), c)
          val c = eat (Token.LEFTARROW, c)
          val (exp, c) = getExpression c
       in (Map.insert (grm, id, exp), c) end
@@ -110,6 +109,9 @@ struct
               Token.EOF => grm
             | _         => getDefs (getDef (grm, (t, c)))
       end
-   in getDefs (Map.empty, 0) end
+   in
+      getDefs (Map.empty, 0)
+      handle Err.Peg (msg, p) => (Err.print (Err.formatMsg (s, msg, p)); Map.empty)
+   end
 end
 

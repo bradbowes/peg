@@ -34,11 +34,11 @@ struct
 
       fun getLiteral (tok, delim, pos) = let
          fun escape (ch, pos) = case ch of
-              #"\^D" => raise Fail "Unexpected end of input"
+              #"\^D" => raise Err.Peg ("unexpected end of input", pos)
             | #"\\"  => (
                let val ch = getChar (pos + 1)
                in case ch of
-                    #"\^D" => raise Fail "Unexpected end of input"
+                    #"\^D" => raise Err.Peg ("unexpected end of input", pos)
                   | #"\\"  => ch
                   | #"'"   => ch
                   | #"\""  => ch
@@ -47,7 +47,7 @@ struct
                   | #"n"   => #"\n"
                   | #"t"   => #"\t"
                   | #"r"   => #"\r"
-                  | _      => raise Fail "Illegal escape sequence"
+                  | _      => raise Err.Peg ("illegal escape sequence", pos)
                end, pos + 2)
             | _      => (ch, pos + 1)
 
@@ -79,10 +79,10 @@ struct
 			| #"'"   => getLiteral (LIT, ch, p + 1)
 			| #"\""  => getLiteral (LIT, ch, p + 1)
 			| #"<"   => if (look 1) = #"-" then (LEFTARROW, p + 2)
-							else raise Fail ("Illegal character at " ^ (Int.toString p))
+							else raise Err.Peg ("illegal character", p)
 			| _      =>
 				if Char.isAlpha ch then getId ([ch], p + 1)
-				else raise Fail ("Illegal character at " ^ (Int.toString p))
+				else raise Err.Peg ("illegal character", p)
 		end
    end
 end
