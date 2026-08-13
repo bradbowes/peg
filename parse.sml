@@ -113,5 +113,9 @@ struct
       getDefs (Map.empty, 0)
       handle Err.Peg (msg, p) => (Err.print (Err.formatMsg (s, msg, p)); Map.empty)
    end
+
+   fun parseFile f =
+      parse (TextIO.inputAll (TextIO.openIn f))
+
 end
 

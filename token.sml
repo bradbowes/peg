@@ -20,7 +20,7 @@ struct
 
    fun toString t = case t of
         LEFTARROW    => "<-"
-      | RIGHTARROW   => "=>"
+      | RIGHTARROW   => "->"
       | SLASH        => "/"
       | AND          => "&"
       | NOT          => "!"
@@ -33,7 +33,7 @@ struct
       | LIT s        => "\"" ^ s ^ "\""
       | CLASS s      => "[" ^ s ^ "]"
       | ID s         => s
-      | ACTION s     => ""
+      | ACTION s     => "{" ^ s ^ "}"
       | EOF          => "<EOF>"
 
 end
