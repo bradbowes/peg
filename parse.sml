@@ -12,27 +12,41 @@ struct
             c)
       end
 
-      fun getClass cls = let
+      fun getClass (cls, start) = let
          fun loop (str, ls) = case str of
               x1 :: #"-" :: x2 :: xs   => loop (xs, (Ast.RGE (x1, x2)) :: ls)
-            | _ :: #"-" :: []          => raise Fail "incomplete range"
+            | _ :: #"-" :: []          => raise Err.Peg ("incomplete range", start)
             | x :: xs                  => loop (xs, Ast.CHR x :: ls)
-            | []                       => Ast.ALT (List.rev ls)
+            | []                       =>
+                  let val alts = List.rev ls
+                  in case alts of
+                       []        => raise Err.Peg ("empty class not allowed", start)
+                     | x :: []   => x
+                     | _         => Ast.ALT alts
+                  end
       in loop (String.explode cls, []) end
 
-      fun getPrimary (t, c) = case t of
-           Token.LIT lit   => (Ast.SEQ (map Ast.CHR (String.explode lit)), c)
-         | Token.CLASS cls => (getClass cls, c)
+      fun getLiteral (lit, start) = let
+         val ls = map Ast.CHR (String.explode lit)
+      in case ls of
+           []        => raise Err.Peg ("empty string not allowed", start)
+         | x :: []   => x
+         | _         => Ast.SEQ ls
+      end
+
+      fun getPrimary (t, c, start) = case t of
+           Token.LIT lit   => (getLiteral (lit, start), c)
+         | Token.CLASS cls => (getClass (cls, start), c)
          | Token.ID id     => (Ast.NT id, c)
          | Token.DOT       => (Ast.ANY, c)
          | Token.LPAREN    => let
                                  val (e, c) = getExpression c
                                  val c = eat (Token.RPAREN, c)
                                in (e, c) end
-         | _               => raise Err.Peg ("expected primary", c)
+         | _               => raise Err.Peg ("expected primary", start)
 
-      and getSuffix (t, c) = let
-         val (p, c) = getPrimary (t, c)
+      and getSuffix (t, c, start) = let
+         val (p, c) = getPrimary (t, c, start)
          val (t, c') = lex c
       in case t of
            Token.QUESTION  => (Ast.OPT p, c')
@@ -41,21 +55,24 @@ struct
          | _               => (p, c)
       end
 
-      and getPrefix (t, c) = case t of
-           Token.AND => let val (s, c) = getSuffix (lex c) in (Ast.PEEK s, c) end
-         | Token.NOT => let val (s, c) = getSuffix (lex c) in (Ast.NOT s, c) end
-         | _         => getSuffix (t, c)
+      and getPrefix (t, c, start) = let
+         val (t', c') = lex c
+      in case t of
+           Token.AND => let val (s, c) = getSuffix (t', c', c) in (Ast.PEEK s, c) end
+         | Token.NOT => let val (s, c) = getSuffix (t', c', c) in (Ast.NOT s, c) end
+         | _         => getSuffix (t, c, start)
+      end
 
       and getSequence c = let
          fun loop (ls, c) = let
             val (t, c') = lex c
 
             fun continue () = let
-               val (item, c) = getPrefix (t, c')
+               val (item, c) = getPrefix (t, c', c)
             in loop (item :: ls, c) end
 
             fun done () = case ls of
-                 []        => raise Err.Peg ("expected sequence", c)
+                 []        => raise Err.Peg ("expected expression", c)
                | x :: []   => (x, c)
                | _         => (Ast.SEQ (List.rev ls), c)
          in
@@ -89,9 +106,7 @@ struct
                         | _         => (Ast.ALT (List.rev ls), c) )
          end
          val (seq, c) = getSequence c
-      in
-         loop ([seq], c)
-      end
+      in loop ([seq], c) end
 
       fun getDef (grm, (t, c)) = let
          val id = case t of
@@ -114,8 +129,12 @@ struct
       handle Err.Peg (msg, p) => (Err.print (Err.formatMsg (s, msg, p)); Map.empty)
    end
 
-   fun parseFile f =
-      parse (TextIO.inputAll (TextIO.openIn f))
+   fun parseFile file = let
+      val input = TextIO.openIn file
+      val s = TextIO.inputAll input
+      val _ = TextIO.closeIn input
+   in parse s end
 
+fun show s = let val g = parse ("a<-" ^ s) in Map.lookup (g, "a") end
 end
 

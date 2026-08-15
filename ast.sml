@@ -4,7 +4,6 @@ struct
         CHR of char
       | RGE of char * char
       | ANY
-      | EOF
       | SEQ of node list
       | ALT of node list
       | OPT of node

@@ -46,6 +46,8 @@ struct
                   | #"]"   => ch
                   | #"n"   => #"\n"
                   | #"t"   => #"\t"
+                  | #"v"   => #"\v"
+                  | #"f"   => #"\f"
                   | #"r"   => #"\r"
                   | _      => raise Err.Peg ("illegal escape sequence", pos)
                end, pos + 2)
