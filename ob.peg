@@ -1,0 +1,124 @@
+Module      <- Imports Decs Sequence? EOF
+Imports     <- (IMPORT QualId (COMMA QualId)*)*
+QualId      <- Id (DOT Id)*
+Decs        <- (EXPORT? Decl)*
+Decl        <- FunDec / VarDec / TypeDec
+FunDec      <- FUNCTION Id FunHdr EQ Expr
+             / EXTERNAL FUNCTION Id FunHdr
+FunHdr      <- LPAREN (Param (COMMA Param)*)? RPAREN Annotation?
+Param       <- VAR? Id Annotation
+Annotation  <- COLON TypeId
+TypeId      <- QualId / ARRAY OF TypeId
+VarDec      <- VAR Id Annotation? EQ Expr
+             / EXTERNAL VAR Id Annotation
+TypeDec     <- TYPE Id EQ TypeSpec
+TypeSpec    <- QualId / RecordSpec / UnionSpec / ArraySpec / FunSpec
+RecordSpec  <- LBRACE (FieldSpec (COMMA FieldSpec)*)? RBRACE
+FieldSpec   <- Id COLON QualId
+UnionSpec   <- VariantSpec (PIPE VariantSpec)+
+VariantSpec <- Id RecordSpec?
+ArraySpec   <- ARRAY OF TypeId
+FunSpec     <- LPAREN (TypeId (COMMA TypeId)*)? RPAREN ARROW TypeId
+Expr        <- Assignment / IfExpr / CaseExpr / LetExpr / ForLoop
+             / WhileLoop / Sequence / Disjunction
+Assignment  <- LValue BECOMES Expr
+LValue      <- Id (Subscript / Field)*
+IfExpr      <- IF Expr THEN Expr ELSE Expr
+CaseExpr    <- Case Expr OF CaseClause (PIPE CaseClause)* ELSE Expr END
+CaseClause  <- CaseList ARROW Expr
+CaseList    <- CaseRange (COMMA CaseRange)*
+CaseRange   <- Case ELIPSIS Case
+Case        <- QualId / Integer / Char
+LetExpr     <- LET Decl* IN Expr
+ForLoop     <- FOR Id BECOMES Expr TO Expr DO Expr
+             / FOR Id IN Expr DO Expr
+WhileLoop   <- WHILE Expr DO Expr
+Sequence    <- Begin Expr (SEMICOLON? Expr)* END
+Unit        <- LPAREN RPAREN
+Disjunction <- Conjunction (OR Conjunction)*
+Conjunction <- Compare (AND Compare)*
+Compare     <- Sum ((EQ / LT / LE / GT / GE / NE) Sum)?
+Sum         <- Product ((PLUS / MINUS) Product)?
+Product     <- Negation ((SLASH / STAR / MOD) Negation)*
+Negation    <- MINUS? Factor
+Factor      <- Id Selector* / Number / String / Char / Abstraction (Args Selector*)?
+             / LPAREN Expr RPAREN Selector* / Record Selector* / Array Selector*
+Selector    <- Subscript / Field / Args
+Subscript   <- LBRACKET Expr (COMMA Expr)* RBRACKET
+Field       <- DOT Id
+Args        <- LPAREN (Expr (COMMA Expr)*)? RPAREN
+Abstraction <- LAMBDA FunHdr EQ Expr
+Record      <- QualId LBRACE (FieldDef (COMMA FieldDef)*)? RBRACE
+FieldDef    <- Id EQ Expr
+Array       <- LBRACKET (Expr (COMMA Expr)*)? RBRACKET
+             / ARRAY LBRACKET Expr (COMMA Expr)* RBRACKET OF Expr
+
+Keyword     <- AND / ARRAY / DO / ELSE / END / EXPORT / EXTERNAL
+             / FOR / FUNCTION / IF / IN / IMPORT / LAMBDA / LET
+             / MOD / OF / OR / THEN / TO / TYPE / VAR / WHILE
+
+AND         <- 'and' !AlphaNum Spaces
+ARRAY       <- 'array' !AlphaNum Spaces
+DO          <- 'do' !AlphaNum Spaces
+ELSE        <- 'else' !AlphaNum Spaces
+END         <- 'end' !AlphaNum Spaces
+EXPORT      <- 'export' !AlphaNum Spaces
+EXTERNAL    <- 'external' !AlphaNum Spaces
+FOR         <- 'for' !AlphaNum Spaces
+FUNCTION    <- 'function' !AlphaNum Spaces
+IF          <- 'if' !AlphaNum Spaces
+IN          <- 'in' !AlphaNum Spaces
+IMPORT      <- 'import' !AlphaNum Spaces
+LAMBDA      <- 'lambda' !AlphaNum Spaces
+LET         <- 'let' !AlphaNum Spaces
+MOD         <- 'mod' !AlphaNum Spaces
+OF          <- 'of' !AlphaNum Spaces
+OR          <- 'or' !AlphaNum Spaces
+THEN        <- 'then' !AlphaNum Spaces
+TO          <- 'to' !AlphaNum Spaces
+TYPE        <- 'type' !AlphaNum Spaces
+VAR         <- 'var' !AlphaNum Spaces
+WHILE       <- 'while' !AlphaNum Spaces
+
+ARROW       <- '->' Spaces
+MINUS       <- '-' Spaces
+PLUS        <- '+' Spaces
+SLASH       <- '/' Spaces
+STAR        <- '*' Spaces
+COMMA       <- ',' Spaces
+ELIPSIS     <- '..' Spaces
+DOT         <- '.' Spaces
+BECOMES     <- ':=' Spaces
+COLON       <- ':' Spaces
+EQ          <- '=' Spaces
+LE          <- '<=' Spaces
+NE          <- '<>' Spaces
+LT          <- '<' Spaces
+GE          <- '>=' Spaces
+GT          <- '>' Spaces
+PIPE        <- '|' Spaces
+LPAREN      <- '(' Spaces
+RPAREN      <- ')' Spaces
+LBRACE      <- '{' Spaces
+RBRACE      <- '}' Spaces
+LBRACKET    <- '[' Spaces
+RBRACKET    <- ']' Spaces
+SEMICOLON   <- ';' Spaces
+
+String      <- '"' StringChar* '"' Spaces
+Char        <- "'" CharChar "'" Spaces
+Number      <- Integer / Real
+Integer     <- Digit+ Spaces
+             / 'Ox' HexDigit+ Spaces
+Real        <- Digit+ '.' Digit+ ('E' ('+' / '-')? Digit+)? Spaces
+Id          <- !Keyword Alpha AlphaNum* Spaces
+
+StringChar  <- !["\\\n] . / Escape
+CharChar    <- !['\\\n] . / Escape
+Escape      <- '\\' ([abtnvfr"'\\] / x HexDigit HexDigit)
+AlphaNum    <- Alpha / Digit
+Alpha       <- [A-Za-z_]
+Digit       <- [0-9]
+HexDigit    <- Digit / [A-Fa-f]
+Spaces      <- [ \t\n\v\f\r]*
+EOF         <- !.

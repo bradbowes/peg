@@ -8,7 +8,7 @@ struct
       in
          if t = tok then c'
          else raise Err.Peg (
-            ("expected '" ^ Token.toString tok ^ "', found '" ^ Token.toString t ^ "'"),
+            "expected '" ^ Token.toString tok ^ "', found '" ^ Token.toString t ^ "'",
             c)
       end
 
