@@ -27,7 +27,7 @@ IfExpr      <- IF Expr THEN Expr ELSE Expr
 CaseExpr    <- Case Expr OF CaseClause (PIPE CaseClause)* (ELSE Expr)? END
 CaseClause  <- CaseList ARROW Expr
 CaseList    <- CaseRange (COMMA CaseRange)*
-CaseRange   <- Case (ELIPSIS Case)*
+CaseRange   <- Case (ELIPSIS Case)?
 Case        <- QualId / Integer / Char
 LetExpr     <- LET Decl* IN Expr
 ForLoop     <- FOR Id BECOMES Expr TO Expr DO Expr
@@ -53,12 +53,13 @@ FieldDef    <- Id EQ Expr
 Array       <- LBRACKET (Expr (COMMA Expr)*)? RBRACKET
              / ARRAY LBRACKET Expr (COMMA Expr)* RBRACKET OF Expr
 
-Keyword     <- AND / ARRAY / DO / ELSE / END / EXPORT / EXTERNAL
+Keyword     <- AND / ARRAY / BEGIN / DO / ELSE / END / EXPORT / EXTERNAL
              / FOR / FUNCTION / IF / IN / IMPORT / LAMBDA / LET
              / MOD / OF / OR / THEN / TO / TYPE / VAR / WHILE
 
 AND         <- 'and' !AlphaNum Spaces
 ARRAY       <- 'array' !AlphaNum Spaces
+BEGIN       <- 'begin' !AlphaNum Spaces
 DO          <- 'do' !AlphaNum Spaces
 ELSE        <- 'else' !AlphaNum Spaces
 END         <- 'end' !AlphaNum Spaces
@@ -108,9 +109,9 @@ SEMICOLON   <- ';' Spaces
 String      <- '"' StringChar* '"' Spaces
 Char        <- "'" CharChar "'" Spaces
 Number      <- Real / Integer
-Integer     <- Digit+ Spaces
-             / '0' [Xx] HexDigit+ Spaces
-Real        <- Digit+ '.' Digit+ ([Ee] [-+]? Digit+)? Spaces
+Integer     <- '0' [Xx] HexDigit+ Spaces
+             / Digit+ Spaces
+Real        <- Digit+ '.' Digit+ ([Ee] ('-' / '+')? Digit+)? Spaces
 Id          <- !Keyword Alpha AlphaNum* Spaces
 
 StringChar  <- !["\\\n] . / Escape
