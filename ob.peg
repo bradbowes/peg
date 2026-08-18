@@ -24,10 +24,10 @@ Expr        <- Assignment / IfExpr / CaseExpr / LetExpr / ForLoop
 Assignment  <- LValue BECOMES Expr
 LValue      <- Id (Subscript / Field)*
 IfExpr      <- IF Expr THEN Expr ELSE Expr
-CaseExpr    <- Case Expr OF CaseClause (PIPE CaseClause)* ELSE Expr END
+CaseExpr    <- Case Expr OF CaseClause (PIPE CaseClause)* (ELSE Expr)? END
 CaseClause  <- CaseList ARROW Expr
 CaseList    <- CaseRange (COMMA CaseRange)*
-CaseRange   <- Case ELIPSIS Case
+CaseRange   <- Case (ELIPSIS Case)*
 Case        <- QualId / Integer / Char
 LetExpr     <- LET Decl* IN Expr
 ForLoop     <- FOR Id BECOMES Expr TO Expr DO Expr
@@ -37,7 +37,7 @@ Sequence    <- Begin Expr (SEMICOLON? Expr)* END
 Unit        <- LPAREN RPAREN
 Disjunction <- Conjunction (OR Conjunction)*
 Conjunction <- Compare (AND Compare)*
-Compare     <- Sum ((EQ / LT / LE / GT / GE / NE) Sum)?
+Compare     <- Sum ((EQ / LE / NE / LT / GE / GT) Sum)?
 Sum         <- Product ((PLUS / MINUS) Product)?
 Product     <- Negation ((SLASH / STAR / MOD) Negation)*
 Negation    <- MINUS? Factor
@@ -107,10 +107,10 @@ SEMICOLON   <- ';' Spaces
 
 String      <- '"' StringChar* '"' Spaces
 Char        <- "'" CharChar "'" Spaces
-Number      <- Integer / Real
+Number      <- Real / Integer
 Integer     <- Digit+ Spaces
-             / 'Ox' HexDigit+ Spaces
-Real        <- Digit+ '.' Digit+ ('E' ('+' / '-')? Digit+)? Spaces
+             / '0' [Xx] HexDigit+ Spaces
+Real        <- Digit+ '.' Digit+ ([Ee] [-+]? Digit+)? Spaces
 Id          <- !Keyword Alpha AlphaNum* Spaces
 
 StringChar  <- !["\\\n] . / Escape
