@@ -33,7 +33,7 @@ LetExpr     <- LET Decl* IN Expr
 ForLoop     <- FOR Id BECOMES Expr TO Expr DO Expr
              / FOR Id IN Expr DO Expr
 WhileLoop   <- WHILE Expr DO Expr
-Sequence    <- Begin Expr (SEMICOLON? Expr)* END
+Sequence    <- BEGIN Expr (SEMICOLON? Expr)* END
 Unit        <- LPAREN RPAREN
 Disjunction <- Conjunction (OR Conjunction)*
 Conjunction <- Compare (AND Compare)*
@@ -121,5 +121,7 @@ AlphaNum    <- Alpha / Digit
 Alpha       <- [A-Za-z_]
 Digit       <- [0-9]
 HexDigit    <- Digit / [A-Fa-f]
-Spaces      <- [ \t\n\v\f\r]*
+Spaces      <- (Space / Comment)*
+Space       <- [ \t\n\v\f\r]
+Comment     <- '(*' (Comment / (!'*)' .))* '*)'
 EOF         <- !.
